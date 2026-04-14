@@ -286,12 +286,13 @@ function renderTable() {
 function updateClock() {
   const now = new Date();
   const main = document.getElementById('clock-main');
-  const secs = document.getElementById('clock-secs');
   
-  if (main && secs) {
+  if (main) {
     const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     const secStr = now.toLocaleTimeString('en-GB', { second: '2-digit' });
-    main.innerHTML = `${timeStr} <span class="seconds">${secStr}</span>`;
+    // Pastikan span detik tetap memiliki ID 'clock-secs' agar loop berikutnya bisa menemukannya (jika perlu)
+    // Namun lebih baik kita update innerHTML induknya saja secara konsisten
+    main.innerHTML = `${timeStr} <span class="seconds" id="clock-secs">${secStr}</span>`;
   }
 }
 
