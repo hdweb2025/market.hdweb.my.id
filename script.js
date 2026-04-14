@@ -285,20 +285,25 @@ function renderTable() {
 
 function updateClock() {
   const now = new Date();
-  const main = document.getElementById('clock-main');
+  // WIB is UTC+7
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const wib = new Date(utc + (3600000 * 7));
   
-  if (main) {
-    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    const secStr = now.toLocaleTimeString('en-GB', { second: '2-digit' });
-    // Pastikan span detik tetap memiliki ID 'clock-secs' agar loop berikutnya bisa menemukannya (jika perlu)
-    // Namun lebih baik kita update innerHTML induknya saja secara konsisten
-    main.innerHTML = `${timeStr} <span class="seconds" id="clock-secs">${secStr}</span>`;
+  const hmSpan = document.getElementById('clock-h-m');
+  const sSpan = document.getElementById('clock-secs');
+  
+  if (hmSpan && sSpan) {
+    const h = String(wib.getHours()).padStart(2, '0');
+    const m = String(wib.getMinutes()).padStart(2, '0');
+    const s = String(wib.getSeconds()).padStart(2, '0');
+    hmSpan.textContent = `${h}:${m}`;
+    sSpan.textContent = s;
   }
 }
 
-// --- Initialization ---
-
-document.addEventListener('DOMContentLoaded', () => {
+function init() {
+  console.log("Global Market Monitor Initializing...");
+  
   // Setup Search
   const searchInput = document.getElementById('market-search');
   if (searchInput) {
@@ -317,6 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
 
   // Loops
-  setInterval(renderTable, 1000);
   setInterval(updateClock, 1000);
-});
+  setInterval(renderTable, 1000);
+}
+
+// Run init immediately if script is at end of body
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
