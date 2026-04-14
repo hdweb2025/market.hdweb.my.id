@@ -30,7 +30,7 @@ const MARKETS = [
   // Asia
   { id: 'hk', name: 'HKEX - HONG KONG', shortName: 'HKEX', timezone: 'Asia/Hong_Kong', openTime: '09:30', closeTime: '16:00', lunchStart: '12:00', lunchEnd: '13:00', radiusOffset: 12 },
   { id: 'sha', name: 'SSE - SHANGHAI', shortName: 'SSE', timezone: 'Asia/Shanghai', openTime: '09:30', closeTime: '15:00', lunchStart: '11:30', lunchEnd: '13:00', radiusOffset: 13 },
-  { id: 'sgx', name: 'SGX - SINGAPORE', shortName: 'SGX', timezone: 'Asia/Singapore', openTime: '09:00', closeTime: '17:00', lunchStart: '12:00', lunchEnd: '13:00', radiusOffset: 14 },
+  { id: 'sgx', name: 'SGX - SINGAPORE', shortName: 'SGX', timezone: 'Asia/Singapore', openTime: '09:00', closeTime: '17:00', lunchStart: '12:00', lunchEnd: '12:58', radiusOffset: 14 },
   { id: 'tky', name: 'JPX - TOKYO', shortName: 'JPX', timezone: 'Asia/Tokyo', openTime: '09:00', closeTime: '15:00', lunchStart: '11:30', lunchEnd: '12:30', radiusOffset: 15 },
   
   // Pacific
@@ -345,8 +345,9 @@ function updateMarketData() {
         startOffset = startOffset % 100;
 
         const arcPath = describeArc(200, 200, r, startAngle, endAngle);
-        const arcColor = market.isOpen ? "#f97316" : "#334155";
-        const textColor = market.isOpen ? "#ffffff" : "#64748b";
+        const isLunch = market.statusText === 'Lunch Break';
+        const arcColor = market.isOpen ? "#f97316" : isLunch ? "#3b82f6" : "#334155";
+        const textColor = market.isOpen ? "#ffffff" : isLunch ? "#60a5fa" : "#64748b";
         const fontWeight = market.isOpen ? "bold" : "normal";
         const trackOpacity = 0.2;
         
@@ -381,8 +382,10 @@ function updateMarketData() {
     marketRingsGroup.innerHTML = ringsSVG;
 
     // 5. Render List
-    const listHTML = marketStatuses.map(m => `
-        <div class="p-3 rounded border ${m.isOpen ? 'border-orange-500/50 bg-orange-950/30' : 'border-slate-800 bg-slate-900/40'} flex flex-col justify-between h-full">
+    const listHTML = marketStatuses.map(m => {
+        const isLunch = m.statusText === 'Lunch Break';
+        return `
+        <div class="p-3 rounded border ${m.isOpen ? 'border-orange-500/50 bg-orange-950/30' : isLunch ? 'border-blue-500/50 bg-blue-950/30' : 'border-slate-800 bg-slate-900/40'} flex flex-col justify-between h-full transition-colors">
             <div class="flex justify-between items-start mb-1">
                 <span class="font-bold text-xs text-slate-200">${m.name.split(' - ')[1]}</span>
                 <span class="text-[10px] text-slate-500">${m.shortName}</span>
@@ -390,14 +393,14 @@ function updateMarketData() {
             <div class="mt-2">
                 <div class="flex justify-between text-[10px] text-slate-400 font-mono">
                     <span>${m.openTime} - ${m.closeTime}</span>
-                    <span class="${m.isOpen ? "text-orange-400 font-bold" : ""}">${m.statusText.toUpperCase()}</span>
+                    <span class="${m.isOpen ? "text-orange-400 font-bold" : isLunch ? "text-blue-400 font-bold" : ""}">${m.statusText.toUpperCase()}</span>
                 </div>
-                <div class="w-full bg-slate-800 h-1 mt-1 rounded-full overflow-hidden">
-                     <div class="h-full ${m.isOpen ? 'bg-orange-500' : 'bg-slate-700'}" style="width: 100%"></div>
+                <div class="w-full bg-slate-800/50 h-1 mt-1 rounded-full overflow-hidden">
+                     <div class="h-full transition-all duration-500 ${m.isOpen ? 'bg-orange-500' : isLunch ? 'bg-blue-500 animate-pulse' : 'bg-slate-700'}" style="width: ${m.isOpen || isLunch ? '100%' : '0%'}"></div>
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     marketListEl.innerHTML = listHTML;
 }
