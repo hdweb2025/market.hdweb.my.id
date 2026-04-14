@@ -1,0 +1,28 @@
+{
+  "name": "market.hdweb.my.id",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "build": "tailwindcss -i ./input.css -o ./style.css",
+    "watch": "tailwindcss -i ./input.css -o ./style.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hdweb2025/market.hdweb.my.id.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hdweb2025/market.hdweb.my.id/issues"
+  },
+  "homepage": "https://github.com/hdweb2025/market.hdweb.my.id#readme",
+  "devDependencies": {
+    "tailwindcss": "^4.2.2"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.2.2"
+  }
+}
