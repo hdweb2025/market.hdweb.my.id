@@ -63,48 +63,78 @@ const formatCountdown = (mins) => {
 };
 
 const getMarketStatus = (market, now) => {
-  const offset = getUTCOffsetMinutes(market.timezone, now);
-  const nowUTCMinutes = (now.getUTCHours() * 60) + now.getUTCMinutes();
+  // Gunakan Intl.DateTimeFormat untuk akurasi timezone yang sempurna (termasuk DST)
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: market.timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
   
-  const currentLocalMinutes = (nowUTCMinutes + offset + 1440) % 1440;
-  const openMins = timeToMinutes(market.openTime);
-  const closeMins = timeToMinutes(market.closeTime);
+  const parts = formatter.formatToParts(now);
+  const h = parseInt(parts.find(p => p.type === 'hour').value);
+  const m = parseInt(parts.find(p => p.type === 'minute').value);
+  const s = parseInt(parts.find(p => p.type === 'second').value);
+  
+  const currentTotalSeconds = (h * 3600) + (m * 60) + s;
+  
+  const [openH, openMin] = market.openTime.split(':').map(Number);
+  const openTotalSeconds = (openH * 3600) + (openMin * 60);
+  
+  const [closeH, closeMin] = market.closeTime.split(':').map(Number);
+  const closeTotalSeconds = (closeH * 3600) + (closeMin * 60);
   
   let isLunch = false;
-  let lunchStartMins = 0;
-  let lunchEndMins = 0;
+  let lunchStartTotal = 0;
+  let lunchEndTotal = 0;
   
   if (market.lunchStart) {
-    lunchStartMins = timeToMinutes(market.lunchStart);
-    lunchEndMins = timeToMinutes(market.lunchEnd);
-    if (currentLocalMinutes >= lunchStartMins && currentLocalMinutes < lunchEndMins) {
+    const [lsH, lsM] = market.lunchStart.split(':').map(Number);
+    const [leH, leM] = market.lunchEnd.split(':').map(Number);
+    lunchStartTotal = (lsH * 3600) + (lsM * 60);
+    lunchEndTotal = (leH * 3600) + (leM * 60);
+    if (currentTotalSeconds >= lunchStartTotal && currentTotalSeconds < lunchEndTotal) {
       isLunch = true;
     }
   }
 
-  const isOpen = currentLocalMinutes >= openMins && currentLocalMinutes < closeMins && !isLunch;
+  const isOpen = currentTotalSeconds >= openTotalSeconds && currentTotalSeconds < closeTotalSeconds && !isLunch;
   
   let countdownText = '';
   if (isOpen) {
-    const nextEventMins = market.lunchStart && currentLocalMinutes < lunchStartMins ? lunchStartMins : closeMins;
-    const diff = nextEventMins - currentLocalMinutes;
-    countdownText = `${market.lunchStart && currentLocalMinutes < lunchStartMins ? 'Lunch' : 'Closes'} in ${formatCountdown(diff)}`;
+    const nextEventSeconds = market.lunchStart && currentTotalSeconds < lunchStartTotal ? lunchStartTotal : closeTotalSeconds;
+    const diff = nextEventSeconds - currentTotalSeconds;
+    countdownText = `${market.lunchStart && currentTotalSeconds < lunchStartTotal ? 'Lunch' : 'Closes'} in ${formatCountdown(Math.ceil(diff / 60))}`;
   } else if (isLunch) {
-    countdownText = `Resume in ${formatCountdown(lunchEndMins - currentLocalMinutes)}`;
+    countdownText = `Resume in ${formatCountdown(Math.ceil((lunchEndTotal - currentTotalSeconds) / 60))}`;
   } else {
-    let diff = openMins - currentLocalMinutes;
-    if (diff < 0) diff += 1440;
-    countdownText = `Opens in ${formatCountdown(diff)}`;
+    let diff = openTotalSeconds - currentTotalSeconds;
+    if (diff < 0) diff += 86400; // +24h
+    countdownText = `Opens in ${formatCountdown(Math.ceil(diff / 60))}`;
   }
 
-  // WIB hours for timeline
-  const wibOffset = (TIMEZONE_OFFSET * 60) - offset;
-  const startWIB = (openMins + wibOffset + 1440) % 1440;
-  const endWIB = (closeMins + wibOffset + 1440) % 1440;
+  // WIB hours for timeline (WIB is UTC+7)
+  const utcFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false });
+  const utcParts = utcFormatter.formatToParts(now);
+  const utcH = parseInt(utcParts.find(p => p.type === 'hour').value);
+  const utcM = parseInt(utcParts.find(p => p.type === 'minute').value);
+  const utcNowMinutes = (utcH * 60) + utcM;
+  
+  // Calculate offset in minutes between UTC and market local
+  const marketDateStr = now.toLocaleString('en-US', { timeZone: market.timezone });
+  const utcDateStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
+  const offsetMinutes = Math.round((new Date(marketDateStr) - new Date(utcDateStr)) / 60000);
+
+  const wibOffset = (7 * 60) - offsetMinutes;
+  const startWIB = ( (openH * 60 + openMin) + wibOffset + 1440) % 1440;
+  const endWIB = ( (closeH * 60 + closeMin) + wibOffset + 1440) % 1440;
   let lStartWIB = 0, lEndWIB = 0;
   if (market.lunchStart) {
-    lStartWIB = (lunchStartMins + wibOffset + 1440) % 1440;
-    lEndWIB = (lunchEndMins + wibOffset + 1440) % 1440;
+    const [lsH, lsM] = market.lunchStart.split(':').map(Number);
+    const [leH, leM] = market.lunchEnd.split(':').map(Number);
+    lStartWIB = ( (lsH * 60 + lsM) + wibOffset + 1440) % 1440;
+    lEndWIB = ( (leH * 60 + leM) + wibOffset + 1440) % 1440;
   }
 
   return { 
