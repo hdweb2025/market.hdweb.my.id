@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Global Market Clock 24h - WIB</title>
+    <title>Global Market Monitor 24h - WIB</title>
     <link href="style.css" rel="stylesheet" />
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -34,21 +34,197 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #475569;
       }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.471.0"
-  }
-}
-</script>
-</head>
-  <body>
-    <div id="root"></div>
 
-    <!-- Application Logic -->
-    <script type="module" src="script.js?v=3"></script>
+      /* Animations */
+      @keyframes pulse-slow {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      .animate-pulse-slow {
+        animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      /* Table Styles (Manual CSS as Tailwind is removed) */
+      .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+      .header { border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50; padding: 1rem; }
+      .flex-between { display: flex; align-items: center; justify-content: space-between; }
+      .logo-box { background: linear-gradient(to bottom right, #f97316, #ea580c); padding: 0.75rem; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.2); }
+      .title { font-size: 1.5rem; font-weight: 900; color: white; letter-spacing: -0.025em; margin: 0; }
+      .subtitle { font-size: 10px; color: #64748b; font-family: 'JetBrains Mono'; text-transform: uppercase; letter-spacing: 0.3em; margin-top: 0.25rem; }
+      
+      .time-display { background: rgba(2, 6, 23, 0.5); padding: 0.5rem 1.5rem; border-radius: 1rem; border: 1px solid #1e293b; text-align: right; }
+      .digital-time { font-size: 1.875rem; font-weight: 900; color: white; font-family: 'JetBrains Mono'; line-height: 1; display: flex; align-items: baseline; gap: 0.25rem; }
+      .seconds { font-size: 1.25rem; color: #94a3b8; }
+      .time-label { font-size: 9px; color: #64748b; font-family: 'JetBrains Mono'; text-transform: uppercase; margin-top: 0.25rem; }
+
+      .controls { display: flex; gap: 1.5rem; margin-bottom: 2rem; margin-top: 2rem; }
+      .search-container { flex-grow: 1; position: relative; }
+      .search-input { width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid #1e293b; border-radius: 1rem; padding: 1rem 1rem 1rem 3rem; color: white; font-size: 0.875rem; transition: all 0.2s; box-sizing: border-box; }
+      .search-input:focus { outline: none; border-color: rgba(249, 115, 22, 0.5); box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1); }
+      
+      .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; width: 320px; }
+      .stat-card { background: rgba(15, 23, 42, 0.4); border: 1px solid #1e293b; padding: 0.75rem; border-radius: 1rem; text-align: center; }
+      .stat-label { font-size: 10px; color: #64748b; font-family: 'JetBrains Mono'; text-transform: uppercase; margin-bottom: 0.25rem; }
+      .stat-value { font-size: 1.5rem; font-weight: 900; }
+      .stat-open { color: #f97316; }
+      .stat-lunch { color: #3b82f6; }
+      .stat-closed { color: #475569; }
+
+      .table-wrapper { background: rgba(15, 23, 42, 0.3); border: 1px solid #1e293b; border-radius: 1.5rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+      .table-scroll { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; min-width: 900px; }
+      th { background: rgba(2, 6, 23, 0.4); border-bottom: 1px solid #1e293b; padding: 1rem 1.5rem; text-align: left; font-size: 9px; color: #64748b; font-family: 'JetBrains Mono'; text-transform: uppercase; letter-spacing: 0.2em; }
+      td { padding: 1rem 1.5rem; border-bottom: 1px solid rgba(30, 41, 59, 0.4); vertical-align: middle; }
+      tr:last-child td { border-bottom: none; }
+      tr:hover { background: rgba(30, 41, 59, 0.2); }
+
+      .market-name { font-size: 0.875rem; font-weight: 700; color: #e2e8f0; display: block; }
+      .market-info { font-size: 10px; color: #64748b; font-family: 'JetBrains Mono'; }
+      .region-tag { background: #1e293b; color: #94a3b8; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
+
+      .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; border: 1px solid transparent; width: 80px; }
+      .status-open { background: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.2); color: #fb923c; }
+      .status-lunch { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+      .status-closed { background: #0f172a; border-color: #1e293b; color: #64748b; }
+
+      .countdown-text { display: block; font-size: 9px; font-family: 'JetBrains Mono'; text-align: center; margin-top: 0.25rem; }
+      .countdown-open { color: rgba(249, 115, 22, 0.7); }
+      .countdown-lunch { color: rgba(59, 130, 246, 0.7); }
+      .countdown-closed { color: #475569; }
+
+      .local-time { font-size: 0.875rem; font-family: 'JetBrains Mono'; font-weight: 700; color: #cbd5e1; display: block; text-align: center; }
+      .local-label { font-size: 9px; color: #475569; text-transform: uppercase; font-family: 'JetBrains Mono'; text-align: center; display: block; }
+
+      .timeline-container { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; min-width: 250px; }
+      .timeline-bar { height: 1rem; background: rgba(15, 23, 42, 0.5); border-radius: 0.375rem; overflow: hidden; border: 1px solid rgba(30, 41, 59, 0.5); display: flex; position: relative; }
+      .hour-block { flex-grow: 1; height: 100%; border-right: 1px solid rgba(30, 41, 59, 0.2); position: relative; }
+      .hour-block:last-child { border-right: none; }
+      .hour-open { background: rgba(249, 115, 22, 0.7); }
+      .hour-lunch { background: rgba(59, 130, 246, 0.5); }
+      .current-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: white; box-shadow: 0 0 10px white; z-index: 10; }
+
+      .timeline-labels { display: flex; justify-content: space-between; font-size: 7px; color: #475569; font-family: 'JetBrains Mono'; text-transform: uppercase; padding: 0 2px; }
+
+      .region-header { display: flex; align-items: center; gap: 1rem; padding: 0 0.5rem; margin-top: 2.5rem; margin-bottom: 1rem; }
+      .region-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; display: flex; align-items: center; gap: 0.5rem; margin: 0; }
+      .region-line { height: 1px; flex-grow: 1; background: rgba(30, 41, 59, 0.5); }
+
+      .footer { border-top: 1px solid #0f172a; background: rgba(2, 6, 23, 0.8); padding: 3rem 1rem; margin-top: 5rem; backdrop-filter: blur(12px); }
+      .footer-content { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+      .footer-brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.875rem; }
+      .footer-text { font-size: 0.75rem; color: #64748b; max-width: 24rem; line-height: 1.6; margin-top: 0.75rem; }
+      .footer-copy { font-size: 10px; color: #475569; font-family: 'JetBrains Mono'; text-transform: uppercase; margin-top: 0.75rem; }
+      
+      .footer-links { display: flex; gap: 2rem; justify-content: flex-end; }
+      .link-group { display: flex; flex-direction: column; gap: 0.5rem; }
+      .link-title { font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+      .link-item { font-size: 0.75rem; color: #64748b; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+      .link-item:hover { color: #f97316; }
+
+      @media (max-width: 768px) {
+        .controls { flex-direction: column; }
+        .stats-grid { width: 100%; }
+        .footer-content { grid-template-columns: 1fr; }
+        .footer-links { justify-content: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="container flex-between" style="padding: 0;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div class="logo-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="title">GLOBAL MARKET MONITOR</h1>
+            <p class="subtitle">market.hdweb.my.id</p>
+          </div>
+        </div>
+        
+        <div class="time-display shadow-inner">
+           <div class="digital-time" id="clock-main">
+             00:00 <span class="seconds" id="clock-secs">00</span>
+           </div>
+           <div class="time-label">WIB (UTC+7) Banyumas</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Controls -->
+      <div class="controls">
+        <div class="search-container">
+          <svg style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #475569;" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="market-search" placeholder="Filter by Market, Region, or Symbol..." class="search-input">
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Open</div>
+            <div class="stat-value stat-open" id="stat-open-count">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Lunch</div>
+            <div class="stat-value stat-lunch" id="stat-lunch-count">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Closed</div>
+            <div class="stat-value stat-closed" id="stat-closed-count">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Content Container -->
+      <div id="market-tables-container">
+        <!-- Tables will be injected here by script.js -->
+        <div style="padding: 5rem 0; text-align: center; color: #475569;">
+          Loading markets...
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div>
+          <div class="footer-brand">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            HDWeb Monitor
+          </div>
+          <p class="footer-text">
+            Visualisasi waktu nyata sesi perdagangan bursa saham global dalam format 24 jam. 
+            Data dikonversi ke Waktu Indonesia Barat (WIB) untuk memudahkan trader lokal.
+          </p>
+          <p class="footer-copy">
+            © <span id="footer-year">2024</span> HDWeb. Crafted in Banyumas, Indonesia.
+          </p>
+        </div>
+        
+        <div class="footer-links">
+          <div class="link-group">
+            <h4 class="link-title">Resources</h4>
+            <a href="#" class="link-item">Data Source Info</a>
+            <a href="#" class="link-item">Developer API</a>
+          </div>
+          <div class="link-group">
+            <h4 class="link-title">System</h4>
+            <div class="link-item" style="color: #64748b; gap: 0.5rem;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
+              API: OPERATIONAL
+            </div>
+            <div class="link-item" style="color: #64748b; gap: 0.5rem;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
+              SYNC: REALTIME
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
   </body>
 </html>
